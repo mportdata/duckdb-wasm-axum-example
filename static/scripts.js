@@ -1,25 +1,35 @@
+// import duckdb-wasm
 import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm";
 
+// declare variable db
 let db;
 
 // Initialize DuckDB with custom worker creation
 async function initDuckDB() {
   try {
+    // receive the bundles of files required to run duckdb in the browser
+    // this is the compiled wasm code, the js and worker scripts
+    // worker scripts are js scripts ran in background threads (not the same thread as the ui)
     const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+    // select bundle is a function that selects the files that will work with your browser
     const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
 
+    // creates storage and an address for the main worker
     const worker_url = URL.createObjectURL(
       new Blob([`importScripts("${bundle.mainWorker}");`], {
         type: "text/javascript",
       })
     );
 
+    // creates the worker and logger required for an instance of duckdb
     const worker = new Worker(worker_url);
     const logger = new duckdb.ConsoleLogger();
     db = new duckdb.AsyncDuckDB(logger, worker);
 
+    // loads the web assembly module into memory and configures it
     await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
 
+    // revoke the object url now no longer needed
     URL.revokeObjectURL(worker_url);
     console.log("DuckDB-Wasm initialized successfully.");
   } catch (error) {
