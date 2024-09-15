@@ -6,3 +6,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 axum = "0.7.5"
+askama = "0.12.1"
+askama_axum = "0.4.0"
+tower = "0.5.1"
+dirs = "5.0.1"
