@@ -3,6 +3,10 @@ name = "cloud-data-warehouse"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "cloud-data-warehouse"
+path = "backend/main.rs"
+
 [dependencies]
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 axum = "0.7.5"

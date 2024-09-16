@@ -1,40 +1,36 @@
-// import duckdb-wasm
-import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm";
+import * as duckdb from "@duckdb/duckdb-wasm";
 
-// declare variable db
-let db;
+let db: duckdb.AsyncDuckDB | null = null;
 
-// Initialize DuckDB with custom worker creation
-async function initDuckDB() {
-  try {
-    // receive the bundles of files required to run duckdb in the browser
-    // this is the compiled wasm code, the js and worker scripts
-    // worker scripts are js scripts ran in background threads (not the same thread as the ui)
-    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-    // select bundle is a function that selects the files that will work with your browser
-    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+async function initDuckDB(): Promise<void> {
+    try {
+        // receive the bundles of files required to run duckdb in the browser
+        const JSDELIVR_BUNDLES: duckdb.DuckDBBundles = duckdb.getJsDelivrBundles();
 
-    // creates storage and an address for the main worker
-    const worker_url = URL.createObjectURL(
-      new Blob([`importScripts("${bundle.mainWorker}");`], {
-        type: "text/javascript",
-      })
-    );
+        // select bundle is a function that selects the files that will work with your browser
+        const bundle: duckdb.DuckDBBundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
 
-    // creates the worker and logger required for an instance of duckdb
-    const worker = new Worker(worker_url);
-    const logger = new duckdb.ConsoleLogger();
-    db = new duckdb.AsyncDuckDB(logger, worker);
+        // creates storage and an address for the main worker
+        const worker_url: string = URL.createObjectURL(
+            new Blob([`importScripts("${bundle.mainWorker}");`], {
+                type: "text/javascript",
+            })
+        );
 
-    // loads the web assembly module into memory and configures it
-    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+        // creates the worker and logger required for an instance of duckdb
+        const worker = new Worker(worker_url);
+        const logger = new duckdb.ConsoleLogger();
+        db = new duckdb.AsyncDuckDB(logger, worker);
 
-    // revoke the object url now no longer needed
-    URL.revokeObjectURL(worker_url);
-    console.log("DuckDB-Wasm initialized successfully.");
-  } catch (error) {
-    console.error("Error initializing DuckDB-Wasm:", error);
-  }
+        // loads the web assembly module into memory and configures it
+        await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+
+        // revoke the object url now no longer needed
+        URL.revokeObjectURL(worker_url);
+        console.log("DuckDB-Wasm initialized successfully.");
+    } catch (error) {
+        console.error("Error initializing DuckDB-Wasm:", error);
+    }
 }
 
 // Function to process the uploaded file and run queries
@@ -97,4 +93,3 @@ async function initDuckDB() {
   document.addEventListener("DOMContentLoaded", () => {
     initDuckDB();
   });
-  
