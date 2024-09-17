@@ -37,28 +37,31 @@ async function initDuckDB() {
   }
 }
 
-// Function to process the uploaded file and run queries
-// Function to process the uploaded file and run queries
-async function processFile() {
+async function uploadTable() {
   try {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files ? fileInput.files[0] : null;
-
-    const queryInput = document.getElementById("queryInput");
-    let query = queryInput.value;
 
     if (!file) {
       alert("Please select a file first.");
       return;
     }
 
+    const tableNameInput = document.getElementById("tableNameInput");
+    const tableName = tableNameInput.value;
+
+    if (!tableName) {
+      alert("Please enter a valid table name.");
+      return;
+    }
+
     const arrayBuffer = await file.arrayBuffer();
-    console.log("File loaded:", file.name);
 
     if (!db) {
       console.error("DuckDB-Wasm is not initialized");
       return;
     }
+    console.log("File loaded:", file.name);
 
     const conn = await db.connect();
     console.log("Database connection established");
@@ -70,59 +73,84 @@ async function processFile() {
       const virtualFileName = `/${file.name}`;
       await db.registerFileBuffer(virtualFileName, new Uint8Array(arrayBuffer));
 
-      let table_ref = "";
+      let query = "";
       if (fileType === "csv") {
-        table_ref = `read_csv_auto('${virtualFileName}', header = true)`;
-        //query = `SELECT * FROM read_csv_auto('${virtualFileName}', header = true)`;
+        query = `CREATE TABLE '${tableName}' AS FROM read_csv_auto('${virtualFileName}', header = true)`;
       } else if (fileType === "parquet") {
-        table_ref = `read_parquet('${virtualFileName}')`;
-        //query = `SELECT * FROM read_parquet('${virtualFileName}')`;
+        query = `CREATE TABLE '${tableName}' AS FROM read_parquet('${virtualFileName}')`;
       } else if (fileType === "json") {
-        table_ref = `read_json_parquet('${virtualFileName}')`;
-        //query = `SELECT * FROM read_json_auto('${virtualFileName}')`;
+        query = `CREATE TABLE '${tableName}' AS FROM read_json_auto('${virtualFileName}')`;
       }
 
-      console.log("incoming query: ", query);
-      query = query.replace("myTable", table_ref);
-      console.log("modified query: ", query);
-
-      // Execute the query
-      //await conn.query(query);
-      //console.log("File data loaded into DuckDB");
-
-      // Query the data and display results
-      //const result = await conn.query("SELECT * FROM my_table LIMIT 10");
-      const result = await conn.query(query);
-      const resultSchema = result.schema.fields.map((field) => field.name);
-      console.log(
-        "query result as arrow table:",
-        result.schema.fields.map((field) => field.name)
-      );
-      const resultList = result.toArray();
-      console.log("query result as json:", resultList);
-
-      let resultTable = document.getElementById("resultTable");
-      resultTable.innerHTML = "";
-      let resultHeaderRow = document.createElement("tr");
-      resultTable.appendChild(resultHeaderRow);
-      resultSchema.forEach((columnName) => {
-        let th = document.createElement("th");
-        th.innerText = columnName;
-        resultHeaderRow.appendChild(th);
-      });
-
-      resultList.forEach((resultItem) => {
-        let tr = document.createElement("tr");
-        resultTable.appendChild(tr);
-        resultSchema.forEach((columnName) => {
-          let td = document.createElement("td");
-          td.innerText = resultItem[columnName];
-          tr.appendChild(td);
-        });
-      });
+      await conn.query(query);
+      updateTableList();
     } else {
-      alert("Unsupported file format");
+      console.log("Invalid file type: ", fileType);
     }
+  } catch (error) {
+    console.error("Error processing file or querying data:", error);
+  }
+}
+
+async function updateTableList() {
+  try {
+    if (!db) {
+      console.error("DuckDB-Wasm is not initialized");
+      return;
+    }
+
+    const conn = await db.connect();
+    console.log("Database connection established");
+    const query = `SHOW TABLES;`;
+    const showTables = await conn.query(query);
+    arrowToHtmlTable(showTables, "tablesTable");
+    await conn.close();
+    console.log("Database connection closed");
+  } catch (error) {
+    console.error("Error processing file or querying data:", error);
+  }
+}
+
+function arrowToHtmlTable(arrowTable, htmlTableId) {
+  const tableSchema = arrowTable.schema.fields.map((field) => field.name);
+  const tableRows = arrowTable.toArray();
+
+  let htmlTable = document.getElementById(htmlTableId);
+  htmlTable.innerHTML = "";
+  let tableHeaderRow = document.createElement("tr");
+  htmlTable.appendChild(tableHeaderRow);
+  tableSchema.forEach((tableColumn) => {
+    let th = document.createElement("th");
+    th.innerText = tableColumn;
+    tableHeaderRow.appendChild(th);
+  });
+
+  tableRows.forEach((tableRow) => {
+    let tr = document.createElement("tr");
+    htmlTable.appendChild(tr);
+    tableSchema.forEach((tableColumn) => {
+      let td = document.createElement("td");
+      td.innerText = tableRow[tableColumn];
+      tr.appendChild(td);
+    });
+  });
+}
+
+async function runQuery() {
+  try {
+    const queryInput = document.getElementById("queryInput");
+    let query = queryInput.value;
+
+    if (!db) {
+      console.error("DuckDB-Wasm is not initialized");
+      return;
+    }
+
+    const conn = await db.connect();
+    console.log("Database connection established");
+
+    const result = await conn.query(query);
+    arrowToHtmlTable(result, "resultTable");
 
     await conn.close();
     console.log("Database connection closed");
@@ -135,5 +163,6 @@ async function processFile() {
 document.addEventListener("DOMContentLoaded", () => {
   initDuckDB();
 
-  window.processFile = processFile;
+  window.uploadTable = uploadTable;
+  window.runQuery = runQuery;
 });
