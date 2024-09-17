@@ -44,6 +44,9 @@ async function processFile() {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files ? fileInput.files[0] : null;
 
+    const queryInput = document.getElementById("queryInput");
+    let query = queryInput.value;
+
     if (!file) {
       alert("Please select a file first.");
       return;
@@ -67,14 +70,21 @@ async function processFile() {
       const virtualFileName = `/${file.name}`;
       await db.registerFileBuffer(virtualFileName, new Uint8Array(arrayBuffer));
 
-      let query = "";
+      let table_ref = "";
       if (fileType === "csv") {
-        query = `SELECT * FROM read_csv_auto('${virtualFileName}', header = true)`;
+        table_ref = `read_csv_auto('${virtualFileName}', header = true)`;
+        //query = `SELECT * FROM read_csv_auto('${virtualFileName}', header = true)`;
       } else if (fileType === "parquet") {
-        query = `SELECT * FROM read_parquet('${virtualFileName}')`;
+        table_ref = `read_parquet('${virtualFileName}')`;
+        //query = `SELECT * FROM read_parquet('${virtualFileName}')`;
       } else if (fileType === "json") {
-        query = `SELECT * FROM read_json_auto('${virtualFileName}')`;
+        table_ref = `read_json_parquet('${virtualFileName}')`;
+        //query = `SELECT * FROM read_json_auto('${virtualFileName}')`;
       }
+
+      console.log("incoming query: ", query);
+      query = query.replace("myTable", table_ref);
+      console.log("modified query: ", query);
 
       // Execute the query
       //await conn.query(query);
@@ -92,6 +102,7 @@ async function processFile() {
       console.log("query result as json:", resultList);
 
       let resultTable = document.getElementById("resultTable");
+      resultTable.innerHTML = "";
       let resultHeaderRow = document.createElement("tr");
       resultTable.appendChild(resultHeaderRow);
       resultSchema.forEach((columnName) => {

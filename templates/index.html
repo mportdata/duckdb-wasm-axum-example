@@ -9,7 +9,8 @@
 <body>
     <h1>Upload and Query a File with DuckDB-Wasm</h1>
     <form id="upload-form">
-        <input type="file" id="fileInput" accept=".csv,.parquet,.json" />
+        <input type="file" id="fileInput" accept=".csv,.parquet,.json"/>
+        <input type="text" id="queryInput"/>
         <button type="button" id="uploadBtn" onclick="processFile()">Process File</button>
     </form>
 
