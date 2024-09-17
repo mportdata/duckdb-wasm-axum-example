@@ -4,16 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DuckDB-Wasm File Upload</title>
-    <script type="module" src="/static/app.js" defer></script> 
+    <script type="module" src="/static/scripts.js" defer></script> 
 </head>
 <body>
     <h1>Upload and Query a File with DuckDB-Wasm</h1>
     <form id="upload-form">
         <input type="file" id="fileInput" accept=".csv,.parquet,.json" />
-        <button type="button" onclick="processFile()">Process File</button>
+        <button type="button" id="uploadBtn" onclick="processFile()">Process File</button>
     </form>
 
     <h2>Query Results</h2>
-    <pre id="results"></pre>
+    <table id="resultTable"></table>
+    <ul id="resultList"></ul>
 </body>
 </html>

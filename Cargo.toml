@@ -3,10 +3,6 @@ name = "cloud-data-warehouse"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "cloud-data-warehouse"
-path = "backend/main.rs"
-
 [dependencies]
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 axum = "0.7.5"
@@ -15,3 +11,4 @@ askama_axum = "0.4.0"
 tower = "0.5.1"
 dirs = "5.0.1"
 tower-http = { version = "0.5.2", features = ["fs"] } 
+axum-htmx = "0.6.0"

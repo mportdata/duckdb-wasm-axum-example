@@ -38,63 +38,91 @@ async function initDuckDB() {
 }
 
 // Function to process the uploaded file and run queries
-(window as any).processFile = async function processFile(): Promise<void> {
-    try {
-      const fileInput = document.getElementById("fileInput") as HTMLInputElement;
-      const file = fileInput.files ? fileInput.files[0] : null;
-  
-      if (!file) {
-        alert("Please select a file first.");
-        return;
-      }
-  
-      const arrayBuffer: ArrayBuffer = await file.arrayBuffer();
-      console.log("File loaded:", file.name);
-  
-      if (!db) {
-        console.error("DuckDB-Wasm is not initialized");
-        return;
-      }
-  
-      const conn = await db.connect();
-      console.log("Database connection established");
-  
-      const fileType: string = file.name.split(".").pop()?.toLowerCase() || "";
-  
-      if (fileType === "csv" || fileType === "parquet" || fileType === "json") {
-        // Register the file in DuckDB's virtual file system
-        const virtualFileName = `/${file.name}`;
-        await db.registerFileBuffer(virtualFileName, new Uint8Array(arrayBuffer));
-  
-        let query = "";
-        if (fileType === "csv") {
-          query = `CREATE TABLE my_table AS SELECT * FROM read_csv_auto('${virtualFileName}')`;
-        } else if (fileType === "parquet") {
-          query = `CREATE TABLE my_table AS SELECT * FROM read_parquet('${virtualFileName}')`;
-        } else if (fileType === "json") {
-          query = `CREATE TABLE my_table AS SELECT * FROM read_json_auto('${virtualFileName}')`;
-        }
-  
-        // Execute the query
-        await conn.query(query);
-        console.log("File data loaded into DuckDB");
-  
-        // Query the data and display results
-        const result = await conn.query("SELECT * FROM my_table LIMIT 10");
-        document.getElementById("results")!.innerText = JSON.stringify(result, null, 2);
-      } else {
-        alert("Unsupported file format");
-      }
-  
-      await conn.close();
-      console.log("Database connection closed");
-    } catch (error) {
-      console.error("Error processing file or querying data:", error);
+// Function to process the uploaded file and run queries
+async function processFile() {
+  try {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files ? fileInput.files[0] : null;
+
+    if (!file) {
+      alert("Please select a file first.");
+      return;
     }
-  };
-  
-  // Initialize DuckDB on page load
-  document.addEventListener("DOMContentLoaded", () => {
-    initDuckDB();
-  });
-  
+
+    const arrayBuffer = await file.arrayBuffer();
+    console.log("File loaded:", file.name);
+
+    if (!db) {
+      console.error("DuckDB-Wasm is not initialized");
+      return;
+    }
+
+    const conn = await db.connect();
+    console.log("Database connection established");
+
+    const fileType = file.name.split(".").pop()?.toLowerCase() || "";
+
+    if (fileType === "csv" || fileType === "parquet" || fileType === "json") {
+      // Register the file in DuckDB's virtual file system
+      const virtualFileName = `/${file.name}`;
+      await db.registerFileBuffer(virtualFileName, new Uint8Array(arrayBuffer));
+
+      let query = "";
+      if (fileType === "csv") {
+        query = `SELECT * FROM read_csv_auto('${virtualFileName}', header = true)`;
+      } else if (fileType === "parquet") {
+        query = `SELECT * FROM read_parquet('${virtualFileName}')`;
+      } else if (fileType === "json") {
+        query = `SELECT * FROM read_json_auto('${virtualFileName}')`;
+      }
+
+      // Execute the query
+      //await conn.query(query);
+      //console.log("File data loaded into DuckDB");
+
+      // Query the data and display results
+      //const result = await conn.query("SELECT * FROM my_table LIMIT 10");
+      const result = await conn.query(query);
+      const resultSchema = result.schema.fields.map((field) => field.name);
+      console.log(
+        "query result as arrow table:",
+        result.schema.fields.map((field) => field.name)
+      );
+      const resultList = result.toArray();
+      console.log("query result as json:", resultList);
+
+      let resultTable = document.getElementById("resultTable");
+      let resultHeaderRow = document.createElement("tr");
+      resultTable.appendChild(resultHeaderRow);
+      resultSchema.forEach((columnName) => {
+        let th = document.createElement("th");
+        th.innerText = columnName;
+        resultHeaderRow.appendChild(th);
+      });
+
+      resultList.forEach((resultItem) => {
+        let tr = document.createElement("tr");
+        resultTable.appendChild(tr);
+        resultSchema.forEach((columnName) => {
+          let td = document.createElement("td");
+          td.innerText = resultItem[columnName];
+          tr.appendChild(td);
+        });
+      });
+    } else {
+      alert("Unsupported file format");
+    }
+
+    await conn.close();
+    console.log("Database connection closed");
+  } catch (error) {
+    console.error("Error processing file or querying data:", error);
+  }
+}
+
+// Initialize DuckDB on page load
+document.addEventListener("DOMContentLoaded", () => {
+  initDuckDB();
+
+  window.processFile = processFile;
+});
